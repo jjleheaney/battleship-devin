@@ -158,6 +158,7 @@ function handlePlayerShot(row, col) {
 
 /** Runs the AI's single shot, then hands the turn back to the player. */
 function takeAITurn() {
+  if (phase !== 'playing') return; // A new game may have been started during the pause.
   const target = chooseShot(ai);
   if (target === null) return; // Board exhausted; cannot happen in a normal game.
 
