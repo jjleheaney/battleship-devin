@@ -6,7 +6,7 @@ A single-page browser game: you place a fleet on a 10x10 grid and take alternati
 shots with an AI opponent until one fleet is gone. Plain HTML, CSS and JavaScript —
 no frameworks, no build step, no backend.
 
-**Play it live:** _(deployment link to be added)_
+**Play it live:** https://battleship-devin.vercel.app
 
 ## Running it locally
 
