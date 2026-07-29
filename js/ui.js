@@ -143,6 +143,9 @@ function handlePlayerShot(row, col) {
     addLog('You fired at ' + squareName(row, col) + ' — hit!');
   }
 
+  // Give the player a moment to see their result before the AI replies. The
+  // flag is set before drawing so the enemy grid renders as locked meanwhile.
+  awaitingAI = true;
   render();
 
   if (isFleetSunk(aiBoard)) {
@@ -150,8 +153,6 @@ function handlePlayerShot(row, col) {
     return;
   }
 
-  // Give the player a moment to see their result before the AI replies.
-  awaitingAI = true;
   setStatus('AI is taking aim…');
   window.setTimeout(takeAITurn, 700);
 }
