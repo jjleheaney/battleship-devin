@@ -172,6 +172,7 @@ function takeAITurn() {
     addLog('AI fired at ' + squareName(target.row, target.col) + ' — hit!');
   }
 
+  awaitingAI = false;
   render();
 
   if (isFleetSunk(playerBoard)) {
@@ -179,7 +180,6 @@ function takeAITurn() {
     return;
   }
 
-  awaitingAI = false;
   setStatus('Your turn — fire at the enemy grid.');
 }
 
