@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Battleship vs Devin</title>
+    <meta name="description" content="Battleship against an AI opponent — a single-page game in plain HTML, CSS and JavaScript." />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="header">
+        <h1 class="title">Battleship</h1>
+        <p class="subtitle">You versus an AI opponent</p>
+      </header>
+
+      <p id="status" class="status">Place your fleet to begin.</p>
+
+      <section id="setup-panel" class="setup">
+        <p id="setup-hint" class="setup-hint"></p>
+        <div class="controls">
+          <button type="button" id="rotate-button" class="button">Rotate</button>
+          <button type="button" id="randomise-button" class="button">Randomise</button>
+          <button type="button" id="start-button" class="button button-primary">Start game</button>
+        </div>
+      </section>
+
+      <section class="boards">
+        <div class="board">
+          <h2 class="board-title">Your fleet</h2>
+          <div id="player-grid" class="grid"></div>
+          <ul id="player-fleet" class="fleet"></ul>
+        </div>
+
+        <div class="board">
+          <h2 class="board-title">Enemy waters</h2>
+          <div id="enemy-grid" class="grid"></div>
+          <ul id="enemy-fleet" class="fleet"></ul>
+        </div>
+      </section>
+
+      <div class="controls">
+        <button type="button" id="new-game-button" class="button">New game</button>
+      </div>
+
+      <section class="log-section">
+        <h2 class="board-title">What just happened</h2>
+        <div id="log" class="log"></div>
+      </section>
+    </main>
+
+    <!-- Rules, then the AI, then the display layer. Load order matters: -->
+    <!-- ai.js and ui.js both use helpers defined in game.js. -->
+    <script src="js/game.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/ui.js"></script>
+  </body>
+</html>
