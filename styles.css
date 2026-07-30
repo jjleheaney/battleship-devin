@@ -142,19 +142,23 @@ body {
   cursor: pointer;
 }
 
-/* A square that cannot be acted on right now — during the AI's turn, once the
-   fleet is placed, and after the game ends — dims like .button:disabled. */
 .cell:disabled {
   cursor: default;
+}
+
+/* Only the enemy grid is ever something you can act on, so only it dims when
+   locked — during the AI's turn, during setup and after the game ends. Your own
+   board is a read-out of the AI's shots rather than a control, so it stays at
+   full brightness and the two grids look the same. */
+#enemy-grid .cell:disabled {
   opacity: 0.4;
 }
 
-/* Squares carrying information stay at full contrast even when locked: your own
-   ships, and every square either side has already fired at. */
-.cell.ship:disabled,
-.cell.hit:disabled,
-.cell.miss:disabled,
-.cell.sunk:disabled {
+/* Squares you have already fired at carry information, so they keep full
+   contrast even while the rest of the enemy board is dimmed. */
+#enemy-grid .cell.hit:disabled,
+#enemy-grid .cell.miss:disabled,
+#enemy-grid .cell.sunk:disabled {
   opacity: 1;
 }
 
