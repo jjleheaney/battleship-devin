@@ -7,6 +7,7 @@ shots with an AI opponent until one fleet is gone. Plain HTML, CSS and JavaScrip
 no frameworks, no build step, no backend.
 
 **Play it live:** https://battleship-devin.vercel.app
+**Build & Review Log** https://docs.google.com/document/d/1_ybN9BJbqDDYohRyjuPnef-zJopQamWFYD6aBWx4LSg/edit?tab=t.0
 
 ## Running it locally
 
