@@ -5,8 +5,9 @@
  * player's board. The only inputs are (a) the size of the board and (b) the
  * results of the AI's own previous shots, which are handed to `recordResult`.
  * Those results are exactly what a human opponent would be told: hit or miss,
- * and whether a ship was sunk. The AI keeps its own private memory of where it
- * has fired and what happened.
+ * whether a ship was sunk, and how long that ship was (the game announces which
+ * ship sank, so its length is public information either way). The AI keeps its
+ * own private memory of where it has fired and what happened.
  *
  * Strategy — "hunt and target":
  *   1. HUNT   — no unfinished hits known. Fire at a random untried square on a
@@ -55,6 +56,19 @@ function chooseShot(ai) {
     if (!ai.tried[square.row][square.col]) return square;
   }
 
+  // The queue ran dry but hits are still unaccounted for, which happens when the
+  // AI guessed a line that was really two ships and both ends of it missed. The
+  // planner only runs on a hit, so re-run it here before giving up on them. It
+  // queues untried squares only, so this cannot spin: either a square comes back
+  // or the queue stays empty and we drop through to hunting.
+  if (ai.unresolvedHits.length > 0) {
+    rebuildTargetQueue(ai);
+    while (ai.targetQueue.length > 0) {
+      const square = ai.targetQueue.pop();
+      if (!ai.tried[square.row][square.col]) return square;
+    }
+  }
+
   // HUNT phase: prefer the chequerboard squares, fall back to anything left.
   const untried = untriedSquares(ai);
   if (untried.length === 0) return null;
@@ -64,33 +78,61 @@ function chooseShot(ai) {
 }
 
 /**
- * Tells the AI what happened to its shot. `result` is 'hit' or 'miss' and
- * `sunk` says whether that hit finished a ship off.
+ * Tells the AI what happened to its shot. `result` is 'hit' or 'miss', `sunk`
+ * says whether that hit finished a ship off, and `size` is how long that ship
+ * was — the same thing the status line announces to the human player. All five
+ * are plain values: no board, fleet or ship object is ever handed over.
  */
-function recordResult(ai, row, col, result, sunk) {
+function recordResult(ai, row, col, result, sunk, size) {
   ai.tried[row][col] = true;
   if (result !== 'hit') return;
 
   ai.hits[row][col] = true;
   ai.unresolvedHits.push({ row: row, col: col });
 
-  // A ship went down: the run of hits containing this final shot was that ship,
-  // so those squares are settled. Any other hits still need chasing — they must
-  // belong to a second ship sitting alongside the one just sunk.
-  if (sunk) forgetSunkShip(ai, row, col);
+  // A ship went down: the squares it occupied are settled. Any other hits still
+  // need chasing — they belong to a second ship alongside the one just sunk.
+  if (sunk) forgetSunkShip(ai, row, col, size);
 
   rebuildTargetQueue(ai);
 }
 
-/** Drops the line of hits containing the killing shot from the unresolved list. */
-function forgetSunkShip(ai, row, col) {
+/**
+ * Drops the sunk ship's squares from the unresolved list.
+ *
+ * The killing shot sits somewhere in a line of hits, but that line can be longer
+ * than the ship if a wounded neighbour is hit alongside it. Knowing how long the
+ * ship was, the AI takes exactly that many squares, closest to the killing shot,
+ * along whichever axis can actually hold it — so a wounded neighbour's hits stay
+ * on the list and keep being chased.
+ */
+function forgetSunkShip(ai, row, col, size) {
   const horizontal = hitRun(ai, row, col, 0, 1);
   const vertical = hitRun(ai, row, col, 1, 0);
-  const ship = horizontal.length >= vertical.length ? horizontal : vertical;
 
+  // Prefer the axis long enough to hold the ship; if both or neither can, fall
+  // back to the longer run.
+  const horizontalFits = horizontal.length >= size;
+  const verticalFits = vertical.length >= size;
+  let line;
+  if (horizontalFits && !verticalFits) {
+    line = horizontal;
+  } else if (verticalFits && !horizontalFits) {
+    line = vertical;
+  } else {
+    line = horizontal.length >= vertical.length ? horizontal : vertical;
+  }
+
+  const ship = nearestCells(line, row, col, size);
   ai.unresolvedHits = ai.unresolvedHits.filter(
     (hit) => !ship.some((cell) => cell.row === hit.row && cell.col === hit.col)
   );
+}
+
+/** The `count` cells of `line` closest to the given square. */
+function nearestCells(line, row, col, count) {
+  const distance = (cell) => Math.abs(cell.row - row) + Math.abs(cell.col - col);
+  return line.slice().sort((a, b) => distance(a) - distance(b)).slice(0, count);
 }
 
 /**
