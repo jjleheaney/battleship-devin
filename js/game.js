@@ -71,7 +71,10 @@ function shipAt(board, row, col) {
   ) || null;
 }
 
-/** A placement is legal when it fits on the board and touches no other ship. */
+/**
+ * A placement is legal when it fits on the board and overlaps no other ship.
+ * Ships are allowed to sit side by side, as in standard Battleship.
+ */
 function canPlaceShip(board, size, row, col, orientation) {
   const cells = shipCells(size, row, col, orientation);
   if (!cells) return false;

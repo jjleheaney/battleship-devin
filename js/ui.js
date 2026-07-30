@@ -25,6 +25,10 @@ let orientation = 'horizontal';
 // True while the AI's shot is pending, so the player cannot fire twice.
 let awaitingAI = false;
 
+// What happened on the most recent shot, shown in the status line in front of
+// whose turn it is. Empty before the first shot of a game.
+let lastEvent = '';
+
 const DOM = {};
 
 // ---------------------------------------------------------------------------
@@ -37,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
   DOM.status = document.getElementById('status');
   DOM.log = document.getElementById('log');
   DOM.setupPanel = document.getElementById('setup-panel');
-  DOM.setupHint = document.getElementById('setup-hint');
   DOM.rotateButton = document.getElementById('rotate-button');
   DOM.randomiseButton = document.getElementById('randomise-button');
   DOM.startButton = document.getElementById('start-button');
@@ -62,13 +65,14 @@ function newGame() {
   nextShipIndex = 0;
   orientation = 'horizontal';
   awaitingAI = false;
+  lastEvent = '';
 
   placeFleetRandomly(aiBoard);
 
   DOM.log.textContent = '';
   DOM.setupPanel.hidden = false;
   render();
-  setStatus('Place your fleet to begin.');
+  setStatus(placementPrompt());
 }
 
 // ---------------------------------------------------------------------------
@@ -90,7 +94,15 @@ function randomisePlayerFleet() {
   placeFleetRandomly(playerBoard);
   nextShipIndex = SHIP_TYPES.length;
   render();
-  setStatus('Fleet placed. Press "Start game" when you are ready.');
+  setStatus(placementPrompt());
+}
+
+/** What the status line should say while the player is still setting up. */
+function placementPrompt() {
+  const ship = nextShip();
+  return ship
+    ? 'Click your grid to place your ' + ship.name + ' (' + ship.size + ' squares).'
+    : 'Fleet placed. Press "Start game" when you are ready.';
 }
 
 /** Handles a click on the player's own grid while ships are being placed. */
@@ -105,12 +117,7 @@ function handlePlacementClick(row, col) {
 
   nextShipIndex += 1;
   render();
-  const remaining = nextShip();
-  setStatus(
-    remaining
-      ? 'Placed your ' + ship.name + '. Now place your ' + remaining.name + '.'
-      : 'Fleet placed. Press "Start game" when you are ready.'
-  );
+  setStatus('Placed your ' + ship.name + '. ' + placementPrompt());
 }
 
 function startGame() {
@@ -135,13 +142,8 @@ function handlePlayerShot(row, col) {
     return;
   }
 
-  if (shot.result === 'miss') {
-    addLog('You fired at ' + squareName(row, col) + ' — miss.');
-  } else if (shot.sunk) {
-    addLog('You fired at ' + squareName(row, col) + ' — hit! You sank the AI\'s ' + shot.ship.name + '.');
-  } else {
-    addLog('You fired at ' + squareName(row, col) + ' — hit!');
-  }
+  lastEvent = describeShot('You', row, col, shot);
+  addLog(lastEvent);
 
   // Give the player a moment to see their result before the AI replies. The
   // flag is set before drawing so the enemy grid renders as locked meanwhile.
@@ -153,7 +155,7 @@ function handlePlayerShot(row, col) {
     return;
   }
 
-  setStatus('AI is taking aim…');
+  announce('AI is taking aim…');
   window.setTimeout(takeAITurn, 700);
 }
 
@@ -164,15 +166,19 @@ function takeAITurn() {
   if (target === null) return; // Board exhausted; cannot happen in a normal game.
 
   const shot = fireAt(playerBoard, target.row, target.col);
-  recordResult(ai, target.row, target.col, shot.result, shot.sunk);
 
-  if (shot.result === 'miss') {
-    addLog('AI fired at ' + squareName(target.row, target.col) + ' — miss.');
-  } else if (shot.sunk) {
-    addLog('AI fired at ' + squareName(target.row, target.col) + ' — hit! The AI sank your ' + shot.ship.name + '.');
-  } else {
-    addLog('AI fired at ' + squareName(target.row, target.col) + ' — hit!');
-  }
+  // The AI is told only plain values — never a board or a ship object.
+  recordResult(
+    ai,
+    target.row,
+    target.col,
+    shot.result,
+    shot.sunk,
+    shot.ship ? shot.ship.size : null
+  );
+
+  lastEvent = describeShot('The AI', target.row, target.col, shot);
+  addLog(lastEvent);
 
   awaitingAI = false;
   render();
@@ -182,7 +188,24 @@ function takeAITurn() {
     return;
   }
 
-  setStatus('Your turn — fire at the enemy grid.');
+  announce('Your turn — fire at the enemy grid.');
+}
+
+/**
+ * One sentence describing a shot, including the sink announcement. `shooter` is
+ * 'You' or 'The AI'; the wording is written from the reader's point of view.
+ */
+function describeShot(shooter, row, col, shot) {
+  const opening = shooter + ' fired at ' + squareName(row, col);
+
+  if (shot.result === 'miss') return opening + ' — miss.';
+  if (!shot.sunk) return opening + ' — hit!';
+
+  const sinking =
+    shooter === 'You'
+      ? ' You sank the AI\'s ' + shot.ship.name + '!'
+      : ' The AI sank your ' + shot.ship.name + '!';
+  return opening + ' — hit!' + sinking;
 }
 
 /** Declares a winner and locks the board. */
@@ -191,10 +214,10 @@ function endGame(winner) {
   awaitingAI = false;
   render();
   if (winner === 'player') {
-    setStatus('You win! The AI\'s fleet is destroyed. Press "New game" to play again.');
+    announce('You win! The AI\'s fleet is destroyed. Press "New game" to play again.');
     addLog('Game over — you win.');
   } else {
-    setStatus('The AI wins — your fleet is destroyed. Press "New game" to play again.');
+    announce('The AI wins — your fleet is destroyed. Press "New game" to play again.');
     addLog('Game over — the AI wins.');
   }
 }
@@ -205,6 +228,11 @@ function endGame(winner) {
 
 function setStatus(text) {
   DOM.status.textContent = text;
+}
+
+/** Status line during play: what just happened, then whose turn it is. */
+function announce(turnText) {
+  setStatus(lastEvent ? lastEvent + ' ' + turnText : turnText);
 }
 
 /** Adds a line to the running commentary, newest first. */
@@ -229,9 +257,6 @@ function renderSetupControls() {
   DOM.startButton.disabled = ship !== null;
   DOM.rotateButton.textContent =
     'Rotate (' + (orientation === 'horizontal' ? 'horizontal' : 'vertical') + ')';
-  DOM.setupHint.textContent = ship
-    ? 'Click your grid to place your ' + ship.name + ' (' + ship.size + ' squares).'
-    : 'All ships placed.';
 }
 
 /**

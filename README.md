@@ -32,8 +32,9 @@ the log at the bottom keeps the full history.
 
 All of the AI's code is in `js/ai.js`. It never looks at your board — the only
 information it gets is the result of its own shots, passed to `recordResult()` as
-"hit", "miss" and "sunk". It keeps its own private map of squares it has already
-fired at, so it never fires at the same square twice.
+"hit", "miss", "sunk" and the length of the ship that sank — the same facts the
+status line announces to you. It keeps its own private map of squares it has
+already fired at, so it never fires at the same square twice.
 
 It plays in two modes:
 
@@ -46,13 +47,23 @@ It plays in two modes:
   a line it stops guessing sideways and only tries the two ends of that line, which
   is where the rest of the ship must be.
 
-When a ship sinks, the AI writes off the unbroken line of hits containing the killing
-shot — that was the ship — and goes back to hunting. If any earlier hits are still
-unaccounted for (which happens when two ships are sitting side by side) it keeps
-chasing those instead of starting over.
+When a ship sinks, the AI writes off exactly as many hit squares as that ship was
+long, closest to the killing shot, along whichever direction can hold it. That
+matters when two ships sit side by side: the wounded neighbour's hits stay on the
+list and keep being chased instead of being credited to the ship that just sank.
+If both ends of a line it was chasing turn out to be misses, it re-plans around
+the hits it still holds rather than wandering off to hunt.
 
-Against randomly placed fleets it finishes a game in about 55 shots on average, out
-of the 100 squares on the board.
+Against randomly placed fleets it finishes a game in about 52 shots on average, out
+of the 100 squares on the board. You can check that yourself:
+
+```bash
+node sim/simulate.js            # 20000 games
+node sim/simulate.js 5000 42    # 5000 games, seed 42
+```
+
+The script reports the average shots per game and how often the AI mishandles the
+two tricky cases above, so the claims here can be re-measured on any revision.
 
 ## How the code is organised
 
@@ -63,6 +74,7 @@ of the 100 squares on the board.
 | `js/game.js` | The rules only. Boards, ship placement, firing, "is this fleet sunk?". Knows nothing about the page. |
 | `js/ai.js` | The AI opponent, kept separate so its logic is easy to review. |
 | `js/ui.js` | Everything on screen: drawing the grids, handling clicks, running the turn order. |
+| `sim/simulate.js` | Node script that plays the AI thousands of times and measures how well it behaves. Not loaded by the page. |
 
 The split to keep in mind: **`game.js` decides what is true, `ui.js` decides what is
 shown.** The AI talks only to `game.js`-shaped data, never to the DOM.
