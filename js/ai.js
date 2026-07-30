@@ -80,7 +80,7 @@ function chooseShot(ai) {
 /**
  * Tells the AI what happened to its shot. `result` is 'hit' or 'miss', `sunk`
  * says whether that hit finished a ship off, and `size` is how long that ship
- * was — the same thing the status line announces to the human player. All four
+ * was — the same thing the status line announces to the human player. All five
  * are plain values: no board, fleet or ship object is ever handed over.
  */
 function recordResult(ai, row, col, result, sunk, size) {
